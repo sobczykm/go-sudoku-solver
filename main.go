@@ -40,15 +40,15 @@ func printSudoku(sudokuArray [9][9]int) {
 	}
 	fmt.Println()
 	fmt.Println()
-	for col := 0; col < 9; col++ {
+	for row := 0; row < 9; row++ {
 		numOfSolved := 0
-		for row := 0; row < 9; row++ {
+		for col := 0; col < 9; col++ {
 			val := sudokuArray[col][row]
 			if val != 0 {
 				numOfSolved++
 			}
 		}
-		printHorizontalLine(col)
+		printHorizontalLine(row)
 		fmt.Print(numOfSolved, " ")
 	}
 	fmt.Println()

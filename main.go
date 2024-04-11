@@ -5,8 +5,15 @@ import (
 	"slices"
 )
 
+type Index struct {
+	row int
+	col int
+}
+
 func main() {
 	fmt.Println("Hello, World!")
+	possibleNumbers := [9]int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	fmt.Println(possibleNumbers)
 	sudokuArray := [9][9]int{
 		{3, 0, 0, 9, 2, 0, 0, 0, 6},
 		{1, 0, 5, 0, 0, 0, 0, 9, 0},
@@ -31,13 +38,70 @@ func main() {
 	if maxRow > maxColl {
 		fmt.Println(maxRowIndex)
 	} else {
-		fmt.Println(maxCollIndex)
-		findFirstZeroInLine(sudokuArray, maxCollIndex, false)
+		col := maxCollIndex
+		row := findFirstZeroInLine(sudokuArray, col, false)
+
+		firstZeroIndex := Index{row, col}
+		possibilitiesForField := findPossibilitiesForField(sudokuArray, firstZeroIndex, possibleNumbers)
+		fmt.Println(possibilitiesForField)
+
 	}
 }
 
-func findFirstZeroInLine(sudokuArray [9][9]int, maxCollIndex int, false bool) {
+func findPossibilitiesForField(sudokuArray [9][9]int, firstZeroIndex Index, possibleNumbers [9]int) [9]int {
+	countOutRowPossibilities(sudokuArray, firstZeroIndex, &possibleNumbers)
+	countOutCollPossibilities(sudokuArray, firstZeroIndex, &possibleNumbers)
+	countOutBoxPossibilities(sudokuArray, firstZeroIndex, &possibleNumbers)
+	return possibleNumbers
+}
 
+func countOutBoxPossibilities(sudokuArray [9][9]int, firstZeroIndex Index, possibleNumbers *[9]int) {
+	row := firstZeroIndex.row
+	col := firstZeroIndex.col
+	boxRow := row / 3
+	boxCol := col / 3
+
+	for i := boxRow * 3; i < boxRow*3+3; i++ {
+		for j := boxCol * 3; j < boxCol*3+3; j++ {
+			val := sudokuArray[i][j]
+			if val != 0 {
+				possibleNumbers[val-1] = 0
+			}
+		}
+	}
+}
+
+func countOutCollPossibilities(sudokuArray [9][9]int, firstZeroIndex Index, possibleNumbers *[9]int) {
+	for i := 0; i < 9; i++ {
+		val := sudokuArray[i][firstZeroIndex.col]
+		if val != 0 {
+			possibleNumbers[val-1] = 0
+		}
+	}
+}
+
+func countOutRowPossibilities(sudokuArray [9][9]int, firstZeroIndex Index, possibleNumbers *[9]int) {
+	for i := 0; i < 9; i++ {
+		val := sudokuArray[firstZeroIndex.row][i]
+		if val != 0 {
+			possibleNumbers[val-1] = 0
+		}
+	}
+}
+
+func findFirstZeroInLine(sudokuArray [9][9]int, maxCollIndex int, isRow bool) int {
+	for i := 0; i < 9; i++ {
+		if isRow {
+			if sudokuArray[maxCollIndex][i] == 0 {
+				return i
+			}
+		} else {
+			if sudokuArray[i][maxCollIndex] == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 func printSudoku(sudokuArray [9][9]int) ([]int, []int) {
@@ -101,8 +165,4 @@ func countSolvedCellsInLine(sudokuArray [9][9]int, isRow bool, j int) int {
 		}
 	}
 	return count
-}
-
-func findPossibilitiesForField(sudokuArray [9][9]int, row int, col int) []int {
-	panic("Not implemented")
 }

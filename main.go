@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
 type Index struct {
@@ -10,10 +11,17 @@ type Index struct {
 	col int
 }
 
+type Possibility struct {
+	index              Index
+	possibilities      [9]int
+	numOfPossibilities int
+}
+
+var possibleNumbers = [9]int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+
 func main() {
 	fmt.Println("Hello, World!")
-	possibleNumbers := [9]int{1, 2, 3, 4, 5, 6, 7, 8, 9}
-	fmt.Println(possibleNumbers)
+
 	sudokuArray := [9][9]int{
 		{3, 0, 0, 9, 2, 0, 0, 0, 6},
 		{1, 0, 5, 0, 0, 0, 0, 9, 0},
@@ -27,25 +35,109 @@ func main() {
 	}
 
 	fmt.Println("Sudoku before solving:")
+	solveSudoku(sudokuArray)
+}
+
+func solveSudoku(sudokuArray [9][9]int) {
 	rows, colls := printSudoku(sudokuArray)
 
-	maxRow := slices.Max(rows)
-	maxColl := slices.Max(colls)
+	var unsolvedRows []int
+	var unsolvedColls []int
 
-	maxRowIndex := slices.Index(rows, maxRow)
-	maxCollIndex := slices.Index(colls, maxColl)
+	for _, row := range rows {
+		if row != 9 {
+			unsolvedRows = append(unsolvedRows, row)
+		} else {
+			unsolvedRows = append(unsolvedRows, 0)
+		}
+	}
+
+	for _, coll := range colls {
+		if coll != 9 {
+			unsolvedColls = append(unsolvedColls, coll)
+		} else {
+			unsolvedColls = append(unsolvedColls, 0)
+		}
+	}
+
+	fmt.Println("Unsolved rows: ", unsolvedRows)
+	fmt.Println("Unsolved colls: ", unsolvedColls)
+
+	maxRow := slices.Max(unsolvedRows)
+	maxColl := slices.Max(unsolvedColls)
+	fmt.Println("Max row: ", maxRow)
+	fmt.Println("Max coll: ", maxColl)
+
+	maxRowIndex := slices.Index(unsolvedRows, maxRow)
+	maxCollIndex := slices.Index(unsolvedColls, maxColl)
+
+	var possibilities []Possibility
 
 	if maxRow > maxColl {
-		fmt.Println(maxRowIndex)
+		fmt.Println("Max row is bigger than max coll")
+		row := maxRowIndex
+		zerosInLine := findZerosInLine(sudokuArray, row, false)
+
+		fmt.Println(zerosInLine)
+
+		for _, col := range zerosInLine {
+			firstZeroIndex := Index{row, col}
+			possibilitiesForField := findPossibilitiesForField(sudokuArray, firstZeroIndex, possibleNumbers)
+			var numOfPossibilities int
+			for _, possibility := range possibilitiesForField {
+				if possibility != 0 {
+					numOfPossibilities++
+				}
+			}
+			possibilities = append(possibilities, Possibility{firstZeroIndex, possibilitiesForField, numOfPossibilities})
+		}
 	} else {
 		col := maxCollIndex
-		row := findFirstZeroInLine(sudokuArray, col, false)
+		zerosInLine := findZerosInLine(sudokuArray, col, false)
 
-		firstZeroIndex := Index{row, col}
-		possibilitiesForField := findPossibilitiesForField(sudokuArray, firstZeroIndex, possibleNumbers)
-		fmt.Println(possibilitiesForField)
+		fmt.Println(zerosInLine)
+
+		for _, row := range zerosInLine {
+			firstZeroIndex := Index{row, col}
+			possibilitiesForField := findPossibilitiesForField(sudokuArray, firstZeroIndex, possibleNumbers)
+			var numOfPossibilities int
+			for _, possibility := range possibilitiesForField {
+				if possibility != 0 {
+					numOfPossibilities++
+				}
+			}
+			possibilities = append(possibilities, Possibility{firstZeroIndex, possibilitiesForField, numOfPossibilities})
+		}
 
 	}
+
+	fmt.Println(possibilities)
+	var possibilityWithOnePossibility Possibility
+	for _, possibility := range possibilities {
+		if possibility.numOfPossibilities == 1 {
+			possibilityWithOnePossibility = possibility
+			break
+		}
+	}
+
+	if possibilityWithOnePossibility == (Possibility{}) {
+		panic("No possibility with one possibility found")
+	}
+
+	var value int
+	//return first non zero value
+	for _, possibility := range possibilityWithOnePossibility.possibilities {
+		if possibility != 0 {
+			value = possibility
+			break
+		}
+	}
+	fmt.Println("Value: ", value)
+	fmt.Println("Index: ", possibilityWithOnePossibility.index)
+	sudokuArray[possibilityWithOnePossibility.index.row][possibilityWithOnePossibility.index.col] = value
+
+	time.Sleep(500 * time.Millisecond)
+	solveSudoku(sudokuArray)
 }
 
 func findPossibilitiesForField(sudokuArray [9][9]int, firstZeroIndex Index, possibleNumbers [9]int) [9]int {
@@ -89,19 +181,20 @@ func countOutRowPossibilities(sudokuArray [9][9]int, firstZeroIndex Index, possi
 	}
 }
 
-func findFirstZeroInLine(sudokuArray [9][9]int, maxCollIndex int, isRow bool) int {
+func findZerosInLine(sudokuArray [9][9]int, lineIndex int, isRow bool) []int {
+	zeroIndexes := make([]int, 0)
 	for i := 0; i < 9; i++ {
 		if isRow {
-			if sudokuArray[maxCollIndex][i] == 0 {
-				return i
+			if sudokuArray[lineIndex][i] == 0 {
+				zeroIndexes = append(zeroIndexes, i)
 			}
 		} else {
-			if sudokuArray[i][maxCollIndex] == 0 {
-				return i
+			if sudokuArray[i][lineIndex] == 0 {
+				zeroIndexes = append(zeroIndexes, i)
 			}
 		}
 	}
-	return -1
+	return zeroIndexes
 }
 
 func printSudoku(sudokuArray [9][9]int) ([]int, []int) {
@@ -134,8 +227,6 @@ func printSudoku(sudokuArray [9][9]int) ([]int, []int) {
 	}
 	fmt.Println()
 	fmt.Println()
-	fmt.Println("SolvedRows: ", solvedRows)
-	fmt.Println("SolvedColls: ", solvedColls)
 	return solvedRows, solvedColls
 }
 
